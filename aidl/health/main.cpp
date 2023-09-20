@@ -24,8 +24,34 @@ class ChargerCallbackImpl : public ChargerCallback {
     ChargerCallbackImpl(const std::shared_ptr<Health>& service) : ChargerCallback(service) {}
     bool ChargerEnableSuspend() override { return true; }
 };
-} //namespace aidl::android::hardware::health
+}  // namespace aidl::android::hardware::health
 #endif
+
+namespace aidl::android::hardware::health {
+static constexpr int kChargeCounterMultiplier = 1000;   // mAh to uAh
+static constexpr int kChargeTimeToFullMultiplier = 60;  // mins to secs
+class HealthImpl : public Health {
+  public:
+    using Health::Health;
+    virtual ~HealthImpl() {}
+    ndk::ScopedAStatus getChargeCounterUah(int32_t* out) override;
+
+  protected:
+    void UpdateHealthInfo(HealthInfo* health_info) override;
+};
+void HealthImpl::UpdateHealthInfo(HealthInfo* health_info) {
+    if (health_info->batteryChargeTimeToFullNowSeconds == 65535) {
+        health_info->batteryChargeTimeToFullNowSeconds = -1;
+    } else {
+        health_info->batteryChargeTimeToFullNowSeconds *= kChargeTimeToFullMultiplier;
+    }
+    health_info->batteryChargeCounterUah *= kChargeCounterMultiplier;
+}
+ndk::ScopedAStatus HealthImpl::getChargeCounterUah(int32_t* out) {
+    *out *= kChargeCounterMultiplier;
+    return ndk::ScopedAStatus::ok();
+}
+}  // namespace aidl::android::hardware::health
 
 static constexpr const char* gInstanceName = "default";
 static constexpr std::string_view gChargerArg{"--charger"};
@@ -80,12 +106,14 @@ int main(int argc, char** argv) {
     auto config = std::make_unique<healthd_config>();
     qti_healthd_board_init(config.get());
     ::android::hardware::health::InitHealthdConfig(config.get());
-    auto binder = ndk::SharedRefBase::make<Health>(gInstanceName, std::move(config));
+    auto binder = ndk::SharedRefBase::make<aidl::android::hardware::health::HealthImpl>(
+            gInstanceName, std::move(config));
 
     if (argc >= 2 && argv[1] == gChargerArg) {
 #if !CHARGER_FORCE_NO_UI
         KLOG_INFO(LOG_TAG, "Starting charger mode with UI.");
-        auto charger_callback = std::make_shared<aidl::android::hardware::health::ChargerCallbackImpl>(binder);
+        auto charger_callback =
+                std::make_shared<aidl::android::hardware::health::ChargerCallbackImpl>(binder);
         return ChargerModeMain(binder, charger_callback);
 #endif
         KLOG_INFO(LOG_TAG, "Starting charger mode without UI.");
