@@ -4,6 +4,14 @@
 -->
 <compatibility-matrix version="1.0" type="framework">
     <hal format="hidl" optional="true">
+        <name>android.hardware.media.c2</name>
+        <version>1.0</version>
+        <interface>
+            <name>IComponentStore</name>
+            <instance>dolby</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
         <name>com.fingerprints.extension</name>
         <version>1.0</version>
         <version>2.0</version>
@@ -98,10 +106,26 @@
         </interface>
     </hal>
     <hal format="hidl" optional="true">
+        <name>vendor.dolby.hardware.dms</name>
+        <version>2.0</version>
+        <interface>
+            <name>IDms</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
         <name>vendor.goodix.hardware.fingerprintextension</name>
         <version>1.0</version>
         <interface>
             <name>IGoodixBiometricsFingerprint</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.nxp.nxpnfc</name>
+        <version>1.0</version>
+        <interface>
+            <name>INxpNfc</name>
             <instance>default</instance>
         </interface>
     </hal>
@@ -190,17 +214,17 @@
             <instance>default</instance>
         </interface>
     </hal>
-    <hal format="aidl" optional="true">
-        <name>vendor.xiaomi.hardware.displayfeature_aidl</name>
-        <version>2</version>
+    <hal format="hidl" optional="true">
+        <name>vendor.xiaomi.hardware.displayfeature</name>
+        <version>1.0</version>
         <interface>
             <name>IDisplayFeature</name>
             <instance>default</instance>
         </interface>
     </hal>
-    <hal format="hidl" optional="true">
-        <name>vendor.xiaomi.hardware.displayfeature</name>
-        <version>1.0</version>
+    <hal format="aidl" optional="true">
+        <name>vendor.xiaomi.hardware.displayfeature_aidl</name>
+        <version>2</version>
         <interface>
             <name>IDisplayFeature</name>
             <instance>default</instance>
@@ -304,6 +328,14 @@
         <version>1.0-2</version>
         <interface>
             <name>ITidaService</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.xiaomi.hw.touchfeature</name>
+        <version>1.0</version>
+        <interface>
+            <name>ITouchFeature</name>
             <instance>default</instance>
         </interface>
     </hal>
