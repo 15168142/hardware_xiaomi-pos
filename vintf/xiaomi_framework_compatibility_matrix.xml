@@ -297,6 +297,14 @@
             <instance>default</instance>
         </interface>
     </hal>
+    <hal format="aidl" optional="true">
+        <name>vendor.xiaomi.hardware.mfidoca</name>
+        <version>1</version>
+        <interface>
+            <name>IFidoService</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
     <hal format="hidl" optional="true">
         <name>vendor.xiaomi.hardware.micharge</name>
         <version>1.0</version>
@@ -342,6 +350,14 @@
     <hal format="hidl" optional="true">
         <name>vendor.xiaomi.hardware.mtdservice</name>
         <version>1.0-3</version>
+        <interface>
+            <name>IMTService</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="aidl" optional="true">
+        <name>vendor.xiaomi.hardware.aidl.mtdservice</name>
+        <version>1</version>
         <interface>
             <name>IMTService</name>
             <instance>default</instance>
