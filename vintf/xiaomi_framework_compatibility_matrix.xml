@@ -49,6 +49,18 @@
             <instance>default</instance>
         </interface>
     </hal>
+    <hal format="aidl" optional="true">
+        <name>com.fingerprints.extension3</name>
+        <version>1</version>
+        <interface>
+            <name>IFingerprintNavigation</name>
+            <instance>default</instance>
+        </interface>
+        <interface>
+            <name>IFingerprintSensorTest</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
     <hal format="hidl" optional="true">
         <name>vendor.focaltech.fingerprint</name>
         <version>1.0</version>
@@ -230,6 +242,14 @@
             <instance>default</instance>
         </interface>
     </hal>
+    <hal format="aidl" optional="true">
+        <name>vendor.xiaomi.hardware.dtool1</name>
+        <version>1</version>
+        <interface>
+            <name>IDtool</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
     <hal format="hidl" optional="true">
         <name>vendor.xiaomi.hardware.dtool</name>
         <version>1.0</version>
@@ -241,6 +261,14 @@
     <hal format="hidl" optional="true">
         <name>vendor.xiaomi.hardware.fingerprintextension</name>
         <version>1.0</version>
+        <interface>
+            <name>IXiaomiFingerprint</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="aidl" optional="true">
+        <name>vendor.xiaomi.hardware.fingerprintextension</name>
+        <version>1</version>
         <interface>
             <name>IXiaomiFingerprint</name>
             <instance>default</instance>
