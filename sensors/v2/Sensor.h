@@ -120,7 +120,6 @@ class SysfsPollingOneShotSensor : public OneShotSensor {
     int mWaitPipeFd[2];
     int mPollFd;
     std::string mEnablePath;
-    std::once_flag mEnableOpenOnce;
 };
 
 class DoubleTapSensor : public SysfsPollingOneShotSensor {
