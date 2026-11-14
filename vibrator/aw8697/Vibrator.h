@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 #include <aidl/android/hardware/vibrator/BnVibrator.h>
-#include <array>
 #include <effect.h>
+#include <array>
 #include <condition_variable>
 #include <memory>
 #include <mutex>
 #include <thread>
+#include <vector>
+
 namespace aidl::android::hardware::vibrator {
 class Vibrator final : public BnVibrator {
   public:
@@ -22,7 +24,6 @@ class Vibrator final : public BnVibrator {
                                int32_t* _aidl_return) override;
     ndk::ScopedAStatus getSupportedEffects(std::vector<Effect>* _aidl_return) override;
     ndk::ScopedAStatus setAmplitude(float amplitude) override;
-    ndk::ScopedAStatus setExternalControl(bool enabled) override;
     ndk::ScopedAStatus getCompositionDelayMax(int32_t* maxDelayMs) override;
     ndk::ScopedAStatus getCompositionSizeMax(int32_t* maxSize) override;
     ndk::ScopedAStatus getSupportedPrimitives(std::vector<CompositePrimitive>* supported) override;
@@ -30,19 +31,30 @@ class Vibrator final : public BnVibrator {
                                             int32_t* durationMs) override;
     ndk::ScopedAStatus compose(const std::vector<CompositeEffect>& composite,
                                const std::shared_ptr<IVibratorCallback>& callback) override;
-    ndk::ScopedAStatus getSupportedAlwaysOnEffects(std::vector<Effect>* _aidl_return) override;
-    ndk::ScopedAStatus alwaysOnEnable(int32_t id, Effect effect, EffectStrength strength) override;
-    ndk::ScopedAStatus alwaysOnDisable(int32_t id) override;
     ndk::ScopedAStatus getResonantFrequency(float* resonantFreqHz) override;
-    ndk::ScopedAStatus getQFactor(float* qFactor) override;
-    ndk::ScopedAStatus getFrequencyResolution(float* freqResolutionHz) override;
-    ndk::ScopedAStatus getFrequencyMinimum(float* freqMinimumHz) override;
-    ndk::ScopedAStatus getBandwidthAmplitudeMap(std::vector<float>* _aidl_return) override;
-    ndk::ScopedAStatus getPwlePrimitiveDurationMax(int32_t* durationMs) override;
-    ndk::ScopedAStatus getPwleCompositionSizeMax(int32_t* maxSize) override;
-    ndk::ScopedAStatus getSupportedBraking(std::vector<Braking>* supported) override;
-    ndk::ScopedAStatus composePwle(const std::vector<PrimitivePwle>& composite,
-                                   const std::shared_ptr<IVibratorCallback>& callback) override;
+
+    // chip has no always-on, pwle or external control path
+    ndk::ScopedAStatus setExternalControl(bool) override { return unsupported(); }
+    ndk::ScopedAStatus getSupportedAlwaysOnEffects(std::vector<Effect>*) override {
+        return unsupported();
+    }
+    ndk::ScopedAStatus alwaysOnEnable(int32_t, Effect, EffectStrength) override {
+        return unsupported();
+    }
+    ndk::ScopedAStatus alwaysOnDisable(int32_t) override { return unsupported(); }
+    ndk::ScopedAStatus getQFactor(float*) override { return unsupported(); }
+    ndk::ScopedAStatus getFrequencyResolution(float*) override { return unsupported(); }
+    ndk::ScopedAStatus getFrequencyMinimum(float*) override { return unsupported(); }
+    ndk::ScopedAStatus getBandwidthAmplitudeMap(std::vector<float>*) override {
+        return unsupported();
+    }
+    ndk::ScopedAStatus getPwlePrimitiveDurationMax(int32_t*) override { return unsupported(); }
+    ndk::ScopedAStatus getPwleCompositionSizeMax(int32_t*) override { return unsupported(); }
+    ndk::ScopedAStatus getSupportedBraking(std::vector<Braking>*) override { return unsupported(); }
+    ndk::ScopedAStatus composePwle(const std::vector<PrimitivePwle>&,
+                                   const std::shared_ptr<IVibratorCallback>&) override {
+        return unsupported();
+    }
 
   private:
     struct Step {
@@ -52,9 +64,19 @@ class Vibrator final : public BnVibrator {
         int delay;
         const effect_stream* stream = nullptr;
     };
+    // synthesized waveform keeps samples next to its stream
+    struct Owned {
+        std::vector<int8_t> samples;
+        std::unique_ptr<effect_stream> stream;
+    };
+    static ndk::ScopedAStatus unsupported();
     ndk::ScopedAStatus start(std::vector<Step> steps, std::shared_ptr<IVibratorCallback> callback);
     bool writeWave(const effect_stream& stream, float scale, size_t* offset);
+    bool statusValue(const char* key, int* value);
     int streamDuration(const effect_stream* stream) const;
+    size_t totalLength(const effect_stream& stream) const;
+    const effect_stream* loadStream(uint32_t id);
+    const effect_stream* primitiveStream(CompositePrimitive primitive) const;
     bool upload(int effect, int duration, float scale, int* actualDuration);
     bool stopLocked();
     bool setGain(float amplitude);
@@ -68,8 +90,8 @@ class Vibrator final : public BnVibrator {
     unsigned int mWavePeriod = 0;
     std::array<const effect_stream*, 7> mEffectStreams{};
     std::array<const effect_stream*, 9> mPrimitiveStreams{};
-    std::array<std::vector<int8_t>, 9> mOwnedSamples;
-    std::array<std::unique_ptr<effect_stream>, 9> mOwnedStreams;
+    std::array<Owned, 9> mOwned;
+    std::vector<int8_t> mChunk;
     bool mDirectRamGain = false;
     static constexpr int kRamEffectCount = 10;
     std::array<int, kRamEffectCount> mDurations{};

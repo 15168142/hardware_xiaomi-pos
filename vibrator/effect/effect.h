@@ -30,21 +30,18 @@
 
 #ifndef QTI_VIBRATOR_EFFECT_STREAM_H
 #define QTI_VIBRATOR_EFFECT_STREAM_H
-#include <sys/types.h>
 #include <cstdint>
 
 struct effect_stream {
-    uint32_t effect_id;
     uint32_t length;
     uint32_t play_rate_hz;
     const int8_t* data;
 
-    effect_stream(uint32_t effect_id, uint32_t length, uint32_t play_rate_hz, const int8_t* data)
-        : effect_id(effect_id), length(length), play_rate_hz(play_rate_hz), data(data) {}
+    effect_stream(uint32_t length, uint32_t play_rate_hz, const int8_t* data)
+        : length(length), play_rate_hz(play_rate_hz), data(data) {}
 };
 
-const struct effect_stream* get_effect_stream(uint32_t effect_id);
-// No CLICK fallback or synthesized DOUBLE_CLICK; returned data has process lifetime.
+// no click fallback or synthesized double click, data lives as long as process
 const struct effect_stream* get_effect_stream_exact(uint32_t effect_id);
 
 #endif

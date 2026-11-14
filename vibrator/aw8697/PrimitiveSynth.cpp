@@ -16,10 +16,9 @@ double resonance(float hz) {
 
 struct Params {
     double ms;       // driven length
-    double startHz;  // frequency glide, as multiples of resonance
+    double startHz;  // frequency glide as multiple of resonance
     double endHz;
-    double level;    // sustained drive at resonance builds about 5x a stock
-                     // click, so envelopes stay near click-level output
+    double level;  // sustained drive at resonance builds 5x click, keep envelope near click level
 };
 
 Params params(Shape shape) {
@@ -42,7 +41,7 @@ double envelope(Shape shape, double x) {
     return 0;
 }
 
-// Band-pass biquad: output follows the actuator's velocity.
+// band pass biquad, output follows actuator velocity
 class Resonator {
   public:
     explicit Resonator(double hz) {
@@ -65,7 +64,7 @@ class Resonator {
     double mB0, mA1, mA2, mX1 = 0, mX2 = 0, mY1 = 0, mY2 = 0;
 };
 
-// Drives against the model's velocity until its ring-down falls below 5%.
+// drive against model velocity until ring down falls below 5 percent
 void appendDamping(std::vector<int8_t>* samples, float resonanceHz) {
     const double f0 = resonance(resonanceHz);
     Resonator model(f0);
@@ -78,7 +77,7 @@ void appendDamping(std::vector<int8_t>* samples, float resonanceHz) {
         samples->push_back(static_cast<int8_t>(std::lround(drive)));
         model.step(samples->back());
         cyclePeak = std::max(cyclePeak, std::abs(model.last()));
-        // A velocity zero-crossing is not a settled oscillation. Check a full cycle.
+        // zero crossing is not settled, check full cycle
         if ((n + 1) % cycle == 0) {
             if (cyclePeak < 0.05 * peak) break;
             cyclePeak = 0;

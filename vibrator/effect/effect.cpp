@@ -34,29 +34,23 @@
 
 #define LOG_TAG "libqtivibratoreffect.xiaomi"
 
-#include <aidl/android/hardware/vibrator/Effect.h>
 #include <android-base/logging.h>
 #include <filesystem>
 #include <fstream>
-#include <iostream>
+#include <mutex>
 #include <unordered_map>
 #include <vector>
-#include <mutex>
 
 #include "effect.h"
-
-using aidl::android::hardware::vibrator::Effect;
 
 namespace {
 
 const uint32_t kDefaultPlayRateHz = 24000;
 const uint16_t kPrimitiveMask = (1 << 15);
 
-std::recursive_mutex sEffectMutex;
-std::unordered_map<uint32_t, effect_stream> sEffectStreams;
+std::mutex sEffectMutex;
 std::unordered_map<uint32_t, effect_stream> sExactStreams;
-std::unordered_map<uint32_t, std::vector<int8_t>> sEffectFifoData;
-std::unordered_map<uint32_t, std::vector<int8_t>> sExactFifoData;
+std::unordered_map<uint32_t, std::vector<int8_t>> sFifoData;
 
 std::unique_ptr<effect_stream> readEffectStreamFromFile(uint32_t uniqueEffectId) {
     std::filesystem::path filePath;
@@ -79,38 +73,21 @@ std::unique_ptr<effect_stream> readEffectStreamFromFile(uint32_t uniqueEffectId)
 
     std::error_code error;
     const auto fileSize = std::filesystem::file_size(filePath, error);
-    // Bound allocations and reject empty/truncated files before caching them.
+    // bound allocation, reject empty or truncated file before cache
     if (error || fileSize == 0 || fileSize > 240000) return nullptr;
 
     std::vector<int8_t> fifoData(fileSize);
     if (!data.read(reinterpret_cast<char*>(fifoData.data()), fileSize)) return nullptr;
 
-    auto result = sExactFifoData.emplace(uniqueEffectId, std::move(fifoData));
+    auto result = sFifoData.emplace(uniqueEffectId, std::move(fifoData));
 
-    return std::make_unique<effect_stream>(effectId, result.first->second.size(), kDefaultPlayRateHz,
-                                           result.first->second.data());
-}
-
-std::unique_ptr<effect_stream> duplicateEffect(const effect_stream* effectStream,
-                                               uint32_t newEffectId) {
-    if (!effectStream || effectStream->length > 60000) return nullptr;
-    const std::uint32_t newEffectLength = effectStream->length * 4;
-    std::vector<int8_t> fifoData(newEffectLength);
-
-    std::copy(effectStream->data, effectStream->data + effectStream->length, fifoData.begin());
-    std::copy(effectStream->data, effectStream->data + effectStream->length,
-              fifoData.begin() + newEffectLength - effectStream->length);
-
-    auto result = sEffectFifoData.emplace(newEffectId, std::move(fifoData));
-
-    return std::make_unique<effect_stream>(newEffectId, newEffectLength, kDefaultPlayRateHz,
+    return std::make_unique<effect_stream>(result.first->second.size(), kDefaultPlayRateHz,
                                            result.first->second.data());
 }
 
 }  // namespace
 
-// Exact lookup is used for capability discovery. Never turn a missing primitive
-// into CLICK while claiming that the requested primitive exists.
+// exact lookup for capability discovery, never turn missing primitive to click
 const struct effect_stream* get_effect_stream_exact(uint32_t effectId) {
     std::lock_guard lock(sEffectMutex);
     auto it = sExactStreams.find(effectId);
@@ -118,32 +95,4 @@ const struct effect_stream* get_effect_stream_exact(uint32_t effectId) {
     auto stream = readEffectStreamFromFile(effectId);
     if (!stream) return nullptr;
     return &sExactStreams.emplace(effectId, *stream).first->second;
-}
-
-const struct effect_stream* get_effect_stream(uint32_t effectId) {
-    std::lock_guard lock(sEffectMutex);
-    auto it = sEffectStreams.find(effectId);
-    if (it == sEffectStreams.end()) {
-        std::unique_ptr<effect_stream> newEffectStream = readEffectStreamFromFile(effectId);
-
-        if (newEffectStream) {
-            auto result = sEffectStreams.emplace(effectId, *newEffectStream);
-            return &result.first->second;
-        } else if (effectId == (uint32_t)Effect::DOUBLE_CLICK) {
-            LOG(VERBOSE) << "Could not get double click effect, duplicating click effect";
-            newEffectStream = duplicateEffect(get_effect_stream((uint32_t)Effect::CLICK),
-                                              (uint32_t)Effect::DOUBLE_CLICK);
-            if (newEffectStream) {
-                auto result = sEffectStreams.emplace(effectId, *newEffectStream);
-                return &result.first->second;
-            }
-        } else if (effectId != (uint32_t)Effect::CLICK) {
-            LOG(VERBOSE) << "Could not get effect " << effectId << ", falling back to click effect";
-            return get_effect_stream((uint32_t)Effect::CLICK);
-        }
-    } else {
-        return &it->second;
-    }
-
-    return nullptr;
 }
